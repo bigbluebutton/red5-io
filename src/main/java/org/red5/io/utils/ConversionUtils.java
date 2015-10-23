@@ -1,7 +1,7 @@
 /*
  * RED5 Open Source Flash Server - https://github.com/Red5/
  * 
- * Copyright 2006-2013 by respective authors (see below). All rights reserved.
+ * Copyright 2006-2015 by respective authors (see below). All rights reserved.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -74,12 +74,18 @@ public class ConversionUtils {
 	 */
 	private static Map<Class<?>, Class<?>[]> parameterMap = new HashMap<Class<?>, Class<?>[]>();
 
+	/**
+	 * Method names to skip when scanning for usable application methods.
+	 */
+	private static String ignoredMethodNames;
+	
 	static {
 		for (int i = 0; i < PRIMITIVES.length; i++) {
 			primitiveMap.put(PRIMITIVES[i], WRAPPERS[i]);
 			wrapperMap.put(WRAPPERS[i], PRIMITIVES[i]);
 			parameterMap.put(WRAPPERS[i], PARAMETER_CHAINS[i]);
 		}
+		ignoredMethodNames = new String("equals,hashCode,toString,wait,notifyAll,getClass,clone,compareTo");
 	}
 
 	/**
@@ -283,9 +289,14 @@ public class ConversionUtils {
 		LinkedList<Method> list = new LinkedList<Method>();
 		Method[] methods = object.getClass().getMethods();
 		for (Method m : methods) {
+			String methodName = m.getName();
+			if (ignoredMethodNames.indexOf(methodName) > -1) {
+				log.debug("Skipping method: {}", methodName);
+				continue;
+			}
 			if (log.isDebugEnabled()) {
 				Class<?>[] params = m.getParameterTypes();
-				log.debug("Method name: {} parameter count: {}", m.getName(), params.length);
+				log.debug("Method name: {} parameter count: {}", methodName, params.length);
 				for (Class<?> param : params) {
 					log.debug("Parameter: {}", param);
 				}
@@ -296,7 +307,7 @@ public class ConversionUtils {
 				continue;
 			}
 			//now try to match the name
-			if (!m.getName().equals(method)) {
+			if (!methodName.equals(method)) {
 				log.trace("Method name not the same");
 				continue;
 			}
