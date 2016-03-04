@@ -1,7 +1,7 @@
 /*
  * RED5 Open Source Flash Server - https://github.com/Red5/
  * 
- * Copyright 2006-2015 by respective authors (see below). All rights reserved.
+ * Copyright 2006-2016 by respective authors (see below). All rights reserved.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,42 +24,44 @@ package org.red5.codec;
 public interface IStreamCodecInfo {
     /**
      * Has audio support?
-     * @return           <code>true</code> if stream codec has audio support, <code>false</code> otherwise
+     * 
+     * @return <code>true</code> if stream codec has audio support, <code>false</code> otherwise
      */
     boolean hasAudio();
 
     /**
      * Has video support?
-     * @return           <code>true</code> if stream codec has video support, <code>false</code> otherwise
+     * 
+     * @return <code>true</code> if stream codec has video support, <code>false</code> otherwise
      */
-	boolean hasVideo();
+    boolean hasVideo();
 
-	/**
+    /**
      * Getter for audio codec name
      *
      * @return Audio codec name
      */
     String getAudioCodecName();
 
-	/**
+    /**
      * Getter for video codec name
      *
      * @return Video codec name
      */
     String getVideoCodecName();
 
-	/**
+    /**
      * Return video codec
      *
      * @return Video codec used by stream codec
      */
     IVideoStreamCodec getVideoCodec();
-    
-	/**
+
+    /**
      * Return audio codec
      *
      * @return Audio codec used by stream codec
      */
-    IAudioStreamCodec getAudioCodec();    
-    
+    IAudioStreamCodec getAudioCodec();
+
 }

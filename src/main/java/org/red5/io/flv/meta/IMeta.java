@@ -1,7 +1,7 @@
 /*
  * RED5 Open Source Flash Server - https://github.com/Red5/
  * 
- * Copyright 2006-2015 by respective authors (see below). All rights reserved.
+ * Copyright 2006-2016 by respective authors (see below). All rights reserved.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,8 +21,7 @@ package org.red5.io.flv.meta;
 import java.io.Serializable;
 
 /**
- * IMeta is a Marker Interface
- * CuePoint and MetaData both implement this interface
+ * IMeta is a Marker Interface CuePoint and MetaData both implement this interface
  * 
  * @author The Red5 Project
  * @author daccattato(daccattato@gmail.com)

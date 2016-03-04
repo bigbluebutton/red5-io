@@ -1,7 +1,7 @@
 /*
  * RED5 Open Source Flash Server - https://github.com/Red5/
  * 
- * Copyright 2006-2015 by respective authors (see below). All rights reserved.
+ * Copyright 2006-2016 by respective authors (see below). All rights reserved.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import java.nio.charset.Charset;
  * These are the core AMF data types supported by Red5.
  * 
  * For detailed specification please see the link below.
+ * 
  * @see <a href="http://en.wikipedia.org/wiki/Action_Message_Format">Action Message Format</a>
  * 
  * @author The Red5 Project
@@ -37,7 +38,7 @@ public class AMF {
     public static final Charset CHARSET = Charset.forName("UTF-8");
 
     /**
-     * Max string lenght constant
+     * Max string length constant
      */
     public static final int LONG_STRING_LENGTH = 65535;
 
@@ -90,6 +91,11 @@ public class AMF {
      * End of object marker constant
      */
     public static final byte TYPE_END_OF_OBJECT = 0x09;
+
+    /**
+     * End of object byte sequence
+     */
+    public static final byte[] END_OF_OBJECT_SEQUENCE = new byte[] { (byte) 0x00, (byte) 0x00, TYPE_END_OF_OBJECT };
 
     /**
      * Array marker constant

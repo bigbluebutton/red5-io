@@ -1,7 +1,7 @@
 /*
  * RED5 Open Source Flash Server - https://github.com/Red5/
  *
- * Copyright 2006-2015 by respective authors (see below). All rights reserved.
+ * Copyright 2006-2016 by respective authors (see below). All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,31 +30,31 @@ import org.red5.io.flv.IKeyFrameDataAnalyzer.KeyFrameMeta;
  */
 public interface IKeyFrameMetaCache {
 
-	/**
-	 * Load keyframe informations for the given file.
-	 *
-	 * @param file
-	 *            File to load informations for.
-	 * @return The keyframe informations or <code>null</code> if none exist.
-	 */
-	public KeyFrameMeta loadKeyFrameMeta(File file);
+    /**
+     * Load keyframe informations for the given file.
+     *
+     * @param file
+     *            File to load informations for.
+     * @return The keyframe informations or <code>null</code> if none exist.
+     */
+    public KeyFrameMeta loadKeyFrameMeta(File file);
 
-	/**
-	 * Remove keyframe information for given file. Need to update keyframe cache when re-writing file.
-	 *
-	 * @param file
-	 *            File to remove information for.
-	 */
-	public void removeKeyFrameMeta(File file);
+    /**
+     * Remove keyframe information for given file. Need to update keyframe cache when re-writing file.
+     *
+     * @param file
+     *            File to remove information for.
+     */
+    public void removeKeyFrameMeta(File file);
 
-	/**
-	 * Store keyframe informations for the given file.
-	 *
-	 * @param file
-	 *            File to save informations for.
-	 * @param meta
-	 *            Keyframe informations for this file.
-	 */
-	public void saveKeyFrameMeta(File file, KeyFrameMeta meta);
+    /**
+     * Store keyframe informations for the given file.
+     *
+     * @param file
+     *            File to save informations for.
+     * @param meta
+     *            Keyframe informations for this file.
+     */
+    public void saveKeyFrameMeta(File file, KeyFrameMeta meta);
 
 }
