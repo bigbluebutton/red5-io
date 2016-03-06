@@ -65,26 +65,6 @@
         <junit.version>4.12</junit.version>
         <isoparser.version>1.0.4.2</isoparser.version>
     </properties>
-    <repositories>
-        <repository>
-            <id>sonatype-snapshots</id>
-            <name>Sonatype Snapshots</name>
-            <url>http://oss.sonatype.org/content/repositories/snapshots</url>
-        </repository>
-        <repository>
-            <id>sonatype-releases</id>
-            <name>Sonatype Releases</name>
-            <url>http://oss.sonatype.org/content/repositories/releases</url>
-        </repository>
-        <repository>
-            <id>maven2-repository.dev.java.net</id>
-            <url>http://download.java.net/maven/2</url>
-        </repository>
-        <repository>
-            <id>maven2-repository.jfrog</id>
-	    <url>http://repo.jfrog.org/artifactory/libs-releases/</url>
-        </repository>
-    </repositories>
     <build>
         <defaultGoal>install</defaultGoal>
         <resources>
@@ -453,7 +433,7 @@
         <dependency>
             <groupId>org</groupId>
             <artifactId>jaudiotagger</artifactId>
-            <version>2.0.4-SNAPSHOT</version>
+            <version>2.0.3</version>
         </dependency>
         <dependency>
             <groupId>xerces</groupId>
