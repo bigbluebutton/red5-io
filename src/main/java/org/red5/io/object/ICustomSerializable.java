@@ -1,7 +1,7 @@
 /*
  * RED5 Open Source Flash Server - https://github.com/Red5/
  * 
- * Copyright 2006-2015 by respective authors (see below). All rights reserved.
+ * Copyright 2006-2016 by respective authors (see below). All rights reserved.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,19 +21,19 @@ package org.red5.io.object;
 /**
  * Interface for objects that know how to serialize their contents.
  * 
- * NOTE: This is only used for AMF0 encoding and you should not need to
- * implement this in your own objects.
+ * NOTE: This is only used for AMF0 encoding and you should not need to implement this in your own objects.
  * 
  * @author The Red5 Project
  * @author Joachim Bauch (jojo@struktur.de)
  */
 public interface ICustomSerializable {
 
-	/**
-	 * Serialize this object to the given output stream.
-	 * 
-	 * @param output output
-	 */
-	public void serialize(Output output);
-	
+    /**
+     * Serialize this object to the given output stream.
+     * 
+     * @param output
+     *            output
+     */
+    public void serialize(Output output);
+
 }

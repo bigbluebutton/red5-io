@@ -1,7 +1,7 @@
 /*
  * RED5 Open Source Flash Server - https://github.com/Red5/
  * 
- * Copyright 2006-2015 by respective authors (see below). All rights reserved.
+ * Copyright 2006-2016 by respective authors (see below). All rights reserved.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,17 +19,16 @@
 package org.red5.compatibility.flex.messaging.messages;
 
 /**
- * Added to support flex.messaging.messages.AuthenticationMessage as noted in 
- * http://jira.red5.org/browse/APPSERVER-176
+ * Added to support flex.messaging.messages.AuthenticationMessage as noted in http://jira.red5.org/browse/APPSERVER-176
  * 
  * @author The Red5 Project
  * @author Paul Gregoire (mondain@gmail.com)
  */
 public class AuthenticationMessage extends CommandMessage {
 
-	private static final long serialVersionUID = -9135142173898013075L;
-	
-	//TODO: we need to decode the body to actually make this viable
-	//body=cXdlcXdldzpxd2Vxd2Vxd2Vxd2U
+    private static final long serialVersionUID = -9135142173898013075L;
+
+    //TODO: we need to decode the body to actually make this viable
+    //body=cXdlcXdldzpxd2Vxd2Vxd2Vxd2U
 
 }

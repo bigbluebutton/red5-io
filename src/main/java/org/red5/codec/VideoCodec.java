@@ -1,7 +1,7 @@
 /*
  * RED5 Open Source Flash Server - https://github.com/Red5/
  * 
- * Copyright 2006-2015 by respective authors (see below). All rights reserved.
+ * Copyright 2006-2016 by respective authors (see below). All rights reserved.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,25 +25,22 @@ package org.red5.codec;
  * @author Paul Gregoire (mondain@gmail.com)
  */
 public enum VideoCodec {
-	
-	JPEG((byte) 0x01), H263((byte) 0x02), SCREEN_VIDEO((byte) 0x03), VP6((byte) 0x04),
-	VP6a((byte) 0x05), SCREEN_VIDEO2((byte) 0x06), AVC((byte) 0x07);
 
-	private byte id;
+    JPEG((byte) 0x01), H263((byte) 0x02), SCREEN_VIDEO((byte) 0x03), VP6((byte) 0x04), VP6a((byte) 0x05), SCREEN_VIDEO2((byte) 0x06), AVC((byte) 0x07);
 
-	private VideoCodec(byte id) {
-		this.id = id;
-	}
+    private byte id;
 
-	/**
-	 * Returns back a numeric id for this codec,
-	 * that happens to correspond to the numeric
-	 * identifier that FLV will use for this codec.
-	 * 
-	 * @return the codec id
-	 */
-	public byte getId() {
-		return id;
-	}
-	
+    private VideoCodec(byte id) {
+        this.id = id;
+    }
+
+    /**
+     * Returns back a numeric id for this codec, that happens to correspond to the numeric identifier that FLV will use for this codec.
+     * 
+     * @return the codec id
+     */
+    public byte getId() {
+        return id;
+    }
+
 }

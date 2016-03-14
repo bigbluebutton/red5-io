@@ -1,7 +1,7 @@
 /*
  * RED5 Open Source Flash Server - https://github.com/Red5/
  * 
- * Copyright 2006-2015 by respective authors (see below). All rights reserved.
+ * Copyright 2006-2016 by respective authors (see below). All rights reserved.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,18 +30,18 @@ import org.slf4j.LoggerFactory;
 
 public class M4AReaderTest extends TestCase {
 
-	private static Logger log = LoggerFactory.getLogger(M4AReaderTest.class);
+    private static Logger log = LoggerFactory.getLogger(M4AReaderTest.class);
 
-	@Test
-	public void testCtor() throws Exception {
-		
-		File file = new File("target/test-classes/fixtures/sample.m4a");
-		M4AReader reader = new M4AReader(file);
-		
-		ITag tag = reader.readTag();
-		log.debug("Tag: {}", tag);
-		tag = reader.readTag();		
-		log.debug("Tag: {}", tag);
+    @Test
+    public void testCtor() throws Exception {
 
-	}
+        File file = new File("target/test-classes/fixtures/sample.m4a");
+        M4AReader reader = new M4AReader(file);
+
+        ITag tag = reader.readTag();
+        log.debug("Tag: {}", tag);
+        tag = reader.readTag();
+        log.debug("Tag: {}", tag);
+
+    }
 }

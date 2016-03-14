@@ -1,7 +1,7 @@
 /*
  * RED5 Open Source Flash Server - https://github.com/Red5/
  * 
- * Copyright 2006-2015 by respective authors (see below). All rights reserved.
+ * Copyright 2006-2016 by respective authors (see below). All rights reserved.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,34 +24,35 @@ package org.red5.io.model;
  */
 public class SimpleJavaBean {
 
-	private String nameOfBean = "jeff";
+    private String nameOfBean = "jeff";
 
-	/**
+    /**
      * Getter for property 'nameOfBean'.
      *
      * @return Value for property 'nameOfBean'.
      */
     public String getNameOfBean() {
-		return nameOfBean;
-	}
+        return nameOfBean;
+    }
 
-	/**
+    /**
      * Setter for property 'nameOfBean'.
      *
-     * @param nameOfBean Value to set for property 'nameOfBean'.
+     * @param nameOfBean
+     *            Value to set for property 'nameOfBean'.
      */
     public void setNameOfBean(String nameOfBean) {
-		this.nameOfBean = nameOfBean;
-	}
+        this.nameOfBean = nameOfBean;
+    }
 
-	/** {@inheritDoc} */
+    /** {@inheritDoc} */
     @Override
-	public boolean equals(Object obj){
-		if(obj instanceof SimpleJavaBean){
-			SimpleJavaBean sjb = (SimpleJavaBean) obj;
-			return sjb.getNameOfBean().equals(sjb.getNameOfBean());
-		}
-		return false;
-	}
+    public boolean equals(Object obj) {
+        if (obj instanceof SimpleJavaBean) {
+            SimpleJavaBean sjb = (SimpleJavaBean) obj;
+            return sjb.getNameOfBean().equals(sjb.getNameOfBean());
+        }
+        return false;
+    }
 
 }

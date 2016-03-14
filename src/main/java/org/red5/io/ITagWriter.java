@@ -1,7 +1,7 @@
 /*
  * RED5 Open Source Flash Server - https://github.com/Red5/
  *
- * Copyright 2006-2015 by respective authors (see below). All rights reserved.
+ * Copyright 2006-2016 by respective authors (see below). All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,71 +27,71 @@ import org.apache.mina.core.buffer.IoBuffer;
  */
 public interface ITagWriter {
 
-	/**
-	 * Closes a Writer
-	 */
-	public void close();
+    /**
+     * Closes a Writer
+     */
+    public void close();
 
-	/**
-	 * Return the bytes written
-	 *
-	 * @return Number of bytes written
-	 */
-	public long getBytesWritten();
+    /**
+     * Return the bytes written
+     *
+     * @return Number of bytes written
+     */
+    public long getBytesWritten();
 
-	/**
-	 * Return the file that is written.
-	 *
-	 * @return the File to be written
-	 */
-	public IStreamableFile getFile();
+    /**
+     * Return the file that is written.
+     *
+     * @return the File to be written
+     */
+    public IStreamableFile getFile();
 
-	/**
-	 * Return the offset
-	 *
-	 * @return Offset value
-	 */
-	public int getOffset();
+    /**
+     * Return the offset
+     *
+     * @return Offset value
+     */
+    public int getOffset();
 
-	/**
-	 * Writes the header bytes
-	 *
-	 * @throws IOException
-	 *             I/O exception
-	 */
-	public void writeHeader() throws IOException;
+    /**
+     * Writes the header bytes
+     *
+     * @throws IOException
+     *             I/O exception
+     */
+    public void writeHeader() throws IOException;
 
-	/**
-	 * Write a Stream to disk using bytes
-	 *
-	 * @param b
-	 *            Array of bytes to write
-	 * @return <code>true</code> on success, <code>false</code> otherwise
-	 */
-	public boolean writeStream(byte[] b);
+    /**
+     * Write a Stream to disk using bytes
+     *
+     * @param b
+     *            Array of bytes to write
+     * @return <code>true</code> on success, <code>false</code> otherwise
+     */
+    public boolean writeStream(byte[] b);
 
-	/**
-	 * Write a Tag using bytes
-	 *
-	 * @param type
-	 *            Tag type
-	 * @param data
-	 *            Byte data
-	 * @return <code>true</code> on success, <code>false</code> otherwise
-	 * @throws IOException
-	 *             I/O exception
-	 */
-	public boolean writeTag(byte type, IoBuffer data) throws IOException;
+    /**
+     * Write a Tag using bytes
+     *
+     * @param type
+     *            Tag type
+     * @param data
+     *            Byte data
+     * @return <code>true</code> on success, <code>false</code> otherwise
+     * @throws IOException
+     *             I/O exception
+     */
+    public boolean writeTag(byte type, IoBuffer data) throws IOException;
 
-	/**
-	 * Writes a Tag object
-	 *
-	 * @param tag
-	 *            Tag to write
-	 * @return <code>true</code> on success, <code>false</code> otherwise
-	 * @throws IOException
-	 *             I/O exception
-	 */
-	public boolean writeTag(ITag tag) throws IOException;
+    /**
+     * Writes a Tag object
+     *
+     * @param tag
+     *            Tag to write
+     * @return <code>true</code> on success, <code>false</code> otherwise
+     * @throws IOException
+     *             I/O exception
+     */
+    public boolean writeTag(ITag tag) throws IOException;
 
 }
