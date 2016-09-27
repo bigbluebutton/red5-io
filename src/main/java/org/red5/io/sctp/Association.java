@@ -26,7 +26,7 @@ import java.net.SocketException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.sql.Timestamp;
-import java.util.Random;
+import java.security.SecureRandom;
 
 import org.red5.io.sctp.packet.SctpPacket;
 import org.red5.io.sctp.packet.chunks.Init;
@@ -51,9 +51,9 @@ public class Association implements IAssociationControl {
 
     private InetSocketAddress destination;
 
-    private Random random;
+    private SecureRandom random;
 
-    public Association(final Random random, InetSocketAddress sourceAddress, int initialTSN, int verificationTag) throws SocketException {
+    public Association(final SecureRandom random, InetSocketAddress sourceAddress, int initialTSN, int verificationTag) throws SocketException {
         this.random = random;
         setState(State.CLOSED);
         setVerificationTagItself(random.nextInt());
@@ -61,7 +61,7 @@ public class Association implements IAssociationControl {
         creationTimestamp = new Timestamp(System.currentTimeMillis());
     }
 
-    public Association(final Random random, InetSocketAddress sourceAddress) throws SocketException {
+    public Association(final SecureRandom random, InetSocketAddress sourceAddress) throws SocketException {
         this.random = random;
         setState(State.CLOSED);
         setVerificationTagItself(random.nextInt());

@@ -791,7 +791,7 @@ public class HexDump {
 
 		logger.info(l + " = 0x" + toHexString(l) + " = " + toBinaryString(l));
 
-		java.util.Random rnd = new java.util.Random();
+		java.security.SecureRandom rnd = new java.security.SecureRandom;
 
 		l = rnd.nextLong();
 
@@ -804,7 +804,7 @@ public class HexDump {
 
 		logger.info(s + " = 0x" + toHexString(s) + " = " + toBinaryString(s));
 
-		rnd = new java.util.Random();
+		rnd = new java.security.SecureRandom;
 		s = (short) rnd.nextInt();
 
 		logger.info(s + " = 0x" + toHexString(s) + " = " + toBinaryString(s));

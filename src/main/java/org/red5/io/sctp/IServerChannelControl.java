@@ -21,7 +21,7 @@ package org.red5.io.sctp;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketException;
-import java.util.Random;
+import java.security.SecureRandom;
 
 import javax.crypto.Mac;
 
@@ -35,8 +35,8 @@ public interface IServerChannelControl {
 	IAssociationControl getPendingChannel(InetSocketAddress address);
 	
 	Mac getMac();
-	
-	Random getRandom();
+
+    SecureRandom getRandom();
 	
 	int getPort();
 	

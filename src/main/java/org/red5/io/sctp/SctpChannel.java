@@ -24,7 +24,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
-import java.util.Random;
+import java.security.SecureRandom;
 
 public class SctpChannel {
 
@@ -53,7 +53,7 @@ public class SctpChannel {
 	}
 
 	public static SctpChannel open() throws SocketException {
-		return new SctpChannel(new Association(new Random(), null));
+		return new SctpChannel(new Association(new SecureRandom(), null));
 	}
 
 }

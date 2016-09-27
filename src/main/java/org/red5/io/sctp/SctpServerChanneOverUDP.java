@@ -28,8 +28,8 @@ import java.net.SocketException;
 import java.nio.channels.spi.SelectorProvider;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.util.HashMap;
-import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Level;
@@ -57,7 +57,7 @@ public class SctpServerChanneOverUDP extends SctpServerChannel implements IServe
 	
 	private int maxNumberOfPendingChannels;
 	
-	private Random random = new Random();
+	private SecureRandom random = new SecureRandom();
 	
 	private final Mac messageAuthenticationCode;
 
@@ -142,7 +142,7 @@ public class SctpServerChanneOverUDP extends SctpServerChannel implements IServe
 	}
 	
 	@Override
-	public Random getRandom() {
+	public SecureRandom getRandom() {
 		return random;
 	}
 	

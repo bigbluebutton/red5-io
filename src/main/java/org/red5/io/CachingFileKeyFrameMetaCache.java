@@ -20,9 +20,9 @@ package org.red5.io;
 
 import java.io.File;
 import java.io.IOException;
+import java.security.SecureRandom;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Random;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -36,7 +36,7 @@ public class CachingFileKeyFrameMetaCache extends FileKeyFrameMetaCache {
 
 	private int maxCacheEntry = 500;
 
-	private Random random = new Random();
+	private SecureRandom random = new SecureRandom();
 
 	private void freeCachingMetadata() {
 		int cacheSize = inMemoryMetaCache.size();

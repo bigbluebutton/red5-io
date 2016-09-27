@@ -19,8 +19,8 @@
 package org.red5.io.object;
 
 import java.math.BigInteger;
+import java.security.SecureRandom;
 import java.util.Arrays;
-import java.util.Random;
 
 /**
  * The UnsignedLong class wraps a value of an unsigned 64 bits number.
@@ -69,7 +69,7 @@ public final class UnsignedLong extends UnsignedNumber {
 	 * @param random
 	 *            a Random handler
 	 */
-	public UnsignedLong(Random random) {
+	public UnsignedLong(SecureRandom random) {
 		random.nextBytes(value);
 	}
 
