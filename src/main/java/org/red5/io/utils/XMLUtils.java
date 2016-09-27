@@ -61,9 +61,26 @@ public class XMLUtils {
     	if (StringUtils.isNotEmpty(str)) {
     		try {    			
     			Reader reader = new StringReader(str);
-    			
-    			DocumentBuilder db = DocumentBuilderFactory.newInstance()
-    					.newDocumentBuilder();
+    			DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+
+    			//========================================================================//
+    			// Fix HP Fortify Security Report.
+    			// See https://www.owasp.org/index.php/XML_External_Entity_(XXE)_Prevention_Cheat_Sheet
+    			String FEATURE = null;
+    			// This is the PRIMARY defense. If DTDs (doctypes) are disallowed, almost all XML entity attacks are prevented
+    			// Xerces 2 only - http://xerces.apache.org/xerces2-j/features.html#disallow-doctype-decl
+    			FEATURE = "http://apache.org/xml/features/disallow-doctype-decl";
+    			factory.setFeature(FEATURE, true);
+    			// Disable external DTDs as well
+    			FEATURE = "http://apache.org/xml/features/nonvalidating/load-external-dtd";
+    			factory.setFeature(FEATURE, false);
+
+    			// and these as well, per Timothy Morgan's 2014 paper: "XML Schema, DTD, and Entity Attacks" (see reference below)
+    			factory.setXIncludeAware(false);
+    			factory.setExpandEntityReferences(false);
+    			//=======================================================================//
+
+    			DocumentBuilder db = factory.newDocumentBuilder();
     			Document doc = db.parse(new InputSource(reader));
     			    			
     			reader.close();
