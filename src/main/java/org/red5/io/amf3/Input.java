@@ -768,7 +768,7 @@ public class Input extends org.red5.io.amf.Input implements org.red5.io.object.I
 				// "anonymous" object, load as Map
 				// Resolve circular references
 				for (Map.Entry<String, Object> entry : properties.entrySet()) {
-					if (entry.getValue() == pending) {
+					if (entry != null && entry.getValue() == pending) {
 						entry.setValue(properties);
 					}
 				}
@@ -788,39 +788,41 @@ public class Input extends org.red5.io.amf.Input implements org.red5.io.object.I
 					Class resultClass = result.getClass();
 					pending.resolveProperties(result);
 					for (Map.Entry<String, Object> entry : properties.entrySet()) {
-						// Resolve circular references
-						final String key = entry.getKey();
-						Object value = entry.getValue();
-						if (value == pending) {
-							value = result;
-						}
-						if (value instanceof PendingObject) {
-							// Defer setting of value until real object is created
-							((PendingObject) value).addPendingProperty(result, resultClass, key);
-							continue;
-						}
-						if (value != null) {
-							try {
-								final Field field = resultClass.getField(key);
-								final Class fieldType = field.getType();
-								if (!fieldType.isAssignableFrom(value.getClass())) {
-									value = ConversionUtils.convert(value, fieldType);
-								} else if (value instanceof Enum) {
-									value = Enum.valueOf(fieldType, value.toString());
-								}
-								field.set(result, value);
-							} catch (Exception e) {
-								try {
-									BeanUtils.setProperty(result, key, value);
-								} catch (IllegalAccessException ex) {
-									log.warn("Error mapping key: {} value: {}", key, value);
-								} catch (InvocationTargetException ex) {
-									log.warn("Error mapping key: {} value: {}", key, value);
-								}
+						if (entry != null) {
+							// Resolve circular references
+							final String key = entry.getKey();
+							Object value = entry.getValue();
+							if (value == pending) {
+								value = result;
 							}
-						} else {
-							if (log.isDebugEnabled()) {
-								log.debug("Skipping null property: {}", key);
+							if (value instanceof PendingObject) {
+								// Defer setting of value until real object is created
+								((PendingObject) value).addPendingProperty(result, resultClass, key);
+								continue;
+							}
+							if (value != null) {
+								try {
+									final Field field = resultClass.getField(key);
+									final Class fieldType = field.getType();
+									if (!fieldType.isAssignableFrom(value.getClass())) {
+										value = ConversionUtils.convert(value, fieldType);
+									} else if (value instanceof Enum) {
+										value = Enum.valueOf(fieldType, value.toString());
+									}
+									field.set(result, value);
+								} catch (Exception e) {
+									try {
+										BeanUtils.setProperty(result, key, value);
+									} catch (IllegalAccessException ex) {
+										log.warn("Error mapping key: {} value: {}", key, value);
+									} catch (InvocationTargetException ex) {
+										log.warn("Error mapping key: {} value: {}", key, value);
+									}
+								}
+							} else {
+								if (log.isDebugEnabled()) {
+									log.debug("Skipping null property: {}", key);
+								}
 							}
 						}
 					}
