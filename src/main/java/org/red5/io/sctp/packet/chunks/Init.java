@@ -23,6 +23,7 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 
 import org.red5.io.sctp.IAssociationControl;
 import org.red5.io.sctp.IServerChannelControl;
@@ -123,8 +124,15 @@ public class Init extends Chunk {
 				getNumberOfOutboundStreams(),
 				getNumberOfInboundStreams()
 		);
-		int verificationTag = server.getRandom().nextInt();
-		int initialTSN = server.getRandom().nextInt();
+
+		//========================================================================//
+		// Fix HP Fortify Security Report.
+		// Use SecureRandom for generating random number
+		SecureRandom ranGen = new SecureRandom();
+		int verificationTag = ranGen.nextInt();
+		int initialTSN = ranGen.nextInt();
+		//=======================================================================//
+
 		Chunk initAck = new InitAck(verificationTag, initialTSN, stateCookie, server.getMac());
 		
 		// 2. pack and send packet with initAck inside
