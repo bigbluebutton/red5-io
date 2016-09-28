@@ -20,7 +20,7 @@ package org.red5.io.utils;
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.UnsupportedCharsetException;
-
+import java.security.SecureRandom;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -791,7 +791,7 @@ public class HexDump {
 
 		logger.info(l + " = 0x" + toHexString(l) + " = " + toBinaryString(l));
 
-		java.security.SecureRandom rnd = new java.security.SecureRandom;
+		SecureRandom rnd = new SecureRandom();
 
 		l = rnd.nextLong();
 
@@ -804,7 +804,7 @@ public class HexDump {
 
 		logger.info(s + " = 0x" + toHexString(s) + " = " + toBinaryString(s));
 
-		rnd = new java.security.SecureRandom;
+		rnd = new SecureRandom();
 		s = (short) rnd.nextInt();
 
 		logger.info(s + " = 0x" + toHexString(s) + " = " + toBinaryString(s));
