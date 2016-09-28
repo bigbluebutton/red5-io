@@ -69,7 +69,25 @@ public class FileKeyFrameMetaCache implements IKeyFrameMetaCache {
 
 		Document dom;
 		DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+
 		try {
+			//========================================================================//
+			// Fix HP Fortify Security Report.
+			// See https://www.owasp.org/index.php/XML_External_Entity_(XXE)_Prevention_Cheat_Sheet
+			String FEATURE = null;
+			// This is the PRIMARY defense. If DTDs (doctypes) are disallowed, almost all XML entity attacks are prevented
+			// Xerces 2 only - http://xerces.apache.org/xerces2-j/features.html#disallow-doctype-decl
+			FEATURE = "http://apache.org/xml/features/disallow-doctype-decl";
+			dbf.setFeature(FEATURE, true);
+			// Disable external DTDs as well
+			FEATURE = "http://apache.org/xml/features/nonvalidating/load-external-dtd";
+			dbf.setFeature(FEATURE, false);
+
+			// and these as well, per Timothy Morgan's 2014 paper: "XML Schema, DTD, and Entity Attacks" (see reference below)
+			dbf.setXIncludeAware(false);
+			dbf.setExpandEntityReferences(false);
+			//=======================================================================//
+
 			// Using factory get an instance of document builder
 			DocumentBuilder db = dbf.newDocumentBuilder();
 
@@ -166,7 +184,25 @@ public class FileKeyFrameMetaCache implements IKeyFrameMetaCache {
 
 		Document dom;
 		DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+
 		try {
+			//========================================================================//
+			// Fix HP Fortify Security Report.
+			// See https://www.owasp.org/index.php/XML_External_Entity_(XXE)_Prevention_Cheat_Sheet
+			String FEATURE = null;
+			// This is the PRIMARY defense. If DTDs (doctypes) are disallowed, almost all XML entity attacks are prevented
+			// Xerces 2 only - http://xerces.apache.org/xerces2-j/features.html#disallow-doctype-decl
+			FEATURE = "http://apache.org/xml/features/disallow-doctype-decl";
+			dbf.setFeature(FEATURE, true);
+			// Disable external DTDs as well
+			FEATURE = "http://apache.org/xml/features/nonvalidating/load-external-dtd";
+			dbf.setFeature(FEATURE, false);
+
+			// and these as well, per Timothy Morgan's 2014 paper: "XML Schema, DTD, and Entity Attacks" (see reference below)
+			dbf.setXIncludeAware(false);
+			dbf.setExpandEntityReferences(false);
+			//=======================================================================//
+
 			//get an instance of builder
 			DocumentBuilder db = dbf.newDocumentBuilder();
 			//create an instance of DOM
