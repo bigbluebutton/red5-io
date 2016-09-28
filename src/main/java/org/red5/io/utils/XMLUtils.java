@@ -23,6 +23,7 @@ import java.io.Reader;
 import java.io.StringReader;
 import java.io.StringWriter;
 
+import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.transform.OutputKeys;
@@ -124,6 +125,18 @@ public class XMLUtils {
 	public static String docToString2(Document domDoc) throws IOException {
 		try {
 			TransformerFactory transFact = TransformerFactory.newInstance();
+			//========================================================================//
+			// Fix HP Fortify Security Report.
+			// See https://www.owasp.org/index.php/XML_External_Entity_(XXE)_Prevention_Cheat_Sheet
+			//
+			// To protect a TransformerFactory, the following feature should be set:
+			// TransformerFactory transFact = TransformerFactory.newInstance();
+			// transFact.setFeature(XMLConstants.ACCESS_EXTERNAL_DTD, false);
+			// Transformer trans = transFact.newTransformer(xsltSource);
+			// trans.transform(xmlSource, result);
+
+			transFact.setFeature(XMLConstants.ACCESS_EXTERNAL_DTD, false);
+			//=======================================================================//
 			Transformer trans = transFact.newTransformer();
 			trans.setOutputProperty(OutputKeys.INDENT, "no");
 			StringWriter sw = new StringWriter();

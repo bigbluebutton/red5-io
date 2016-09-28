@@ -195,11 +195,21 @@ public class FileKeyFrameMetaCache implements IKeyFrameMetaCache {
 		OutputFormat format = new OutputFormat(dom);
 		format.setIndenting(true);
 
+		FileOutputStream fos = null;
 		try {
-			XMLSerializer serializer = new XMLSerializer(new FileOutputStream(new File(filename)), format);
+			fos = new FileOutputStream(new File(filename));
+			XMLSerializer serializer = new XMLSerializer(fos, format);
 			serializer.serialize(dom);
 		} catch (IOException err) {
 			log.error("could not save keyframe data", err);
+		} finally {
+			if (fos != null) {
+				try {
+					fos.close();
+				} catch (IOException ex) {
+					log.error("Error closing {}", filename);
+				}
+			}
 		}
 	}
 

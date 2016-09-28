@@ -60,9 +60,9 @@ public class CachingFileKeyFrameMetaCache extends FileKeyFrameMetaCache {
 		try {
 			String canonicalPath = file.getCanonicalPath();
 			if (!inMemoryMetaCache.containsKey(canonicalPath)) {
-				rwLock.readLock().unlock();
-				rwLock.writeLock().lock();
 				try {
+					rwLock.readLock().unlock();
+					rwLock.writeLock().lock();
 					if (inMemoryMetaCache.size() >= maxCacheEntry) {
 						freeCachingMetadata();
 					}
@@ -100,8 +100,8 @@ public class CachingFileKeyFrameMetaCache extends FileKeyFrameMetaCache {
 
 	@Override
 	public void saveKeyFrameMeta(File file, KeyFrameMeta meta) {
-		rwLock.writeLock().lock();
 		try {
+			rwLock.writeLock().lock();
 			String canonicalPath = file.getCanonicalPath();
 			if (inMemoryMetaCache.containsKey(canonicalPath)) {
 				inMemoryMetaCache.remove(canonicalPath);
