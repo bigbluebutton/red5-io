@@ -1,5 +1,5 @@
 /*
- * RED5 Open Source Flash Server - https://github.com/Red5/
+ * RED5 Open Source Media Server - https://github.com/Red5/
  * 
  * Copyright 2006-2016 by respective authors (see below). All rights reserved.
  * 
@@ -27,12 +27,14 @@ import org.red5.io.amf3.ByteArray;
 import org.w3c.dom.Document;
 
 /**
- * Interface for Input which defines the contract methods which are to be implemented. Input object provides ways to read primitives, complex object and object references from byte buffer.
+ * Interface for Input which defines the contract methods which are to be implemented. Input object provides ways to read primitives, 
+ * complex object and object references from byte buffer.
  * 
  * @author The Red5 Project
  * @author Luke Hubbard, Codegent Ltd (luke@codegent.com)
  */
 public interface Input {
+
     /**
      * Read type of data
      * 
@@ -172,5 +174,10 @@ public interface Input {
      * @return Vector&lt;Object&gt;
      */
     Vector<Object> readVectorObject();
+
+    /**
+     * Resets internals.
+     */
+    void reset();
 
 }

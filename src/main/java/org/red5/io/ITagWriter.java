@@ -1,5 +1,5 @@
 /*
- * RED5 Open Source Flash Server - https://github.com/Red5/
+ * RED5 Open Source Media Server - https://github.com/Red5/
  *
  * Copyright 2006-2016 by respective authors (see below). All rights reserved.
  *
@@ -21,9 +21,10 @@ package org.red5.io;
 import java.io.IOException;
 
 import org.apache.mina.core.buffer.IoBuffer;
+import org.red5.media.processor.IPostProcessor;
 
 /**
- * Writes tags to FLV file
+ * Writes tags to a file
  */
 public interface ITagWriter {
 
@@ -93,5 +94,12 @@ public interface ITagWriter {
      *             I/O exception
      */
     public boolean writeTag(ITag tag) throws IOException;
+
+    /**
+     * Adds a post-process for execution once the instance completes.
+     * 
+     * @param postProcessor
+     */
+    public void addPostProcessor(IPostProcessor postProcessor);
 
 }

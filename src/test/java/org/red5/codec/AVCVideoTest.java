@@ -1,5 +1,5 @@
 /*
- * RED5 Open Source Flash Server - https://github.com/Red5/
+ * RED5 Open Source Media Server - https://github.com/Red5/
  * 
  * Copyright 2006-2016 by respective authors (see below). All rights reserved.
  * 
@@ -76,6 +76,33 @@ public class AVCVideoTest {
             assertTrue(video.addData(inter));
         }
         log.info("testSimpleFlow end\n");
+    }
+
+    @Test
+    public void testSimpleFlowNoInterframeBuffer() {
+        log.info("testSimpleFlowNoInterframeBuffer");
+        IoBuffer data = IoBuffer.allocate(128);
+        data.put((byte) 0x17);
+        data.put((byte) 0x01);
+        data.put(RandomStringUtils.random(24).getBytes());
+        data.flip();
+
+        AVCVideo video = new AVCVideo();
+        video.setBufferInterframes(false);
+        assertTrue(video.canHandleData(data));
+        assertTrue(video.addData(data));
+        for (int i = 0; i < 10; i++) {
+            // interframe
+            IoBuffer inter = IoBuffer.allocate(128);
+            inter.put((byte) 0x27);
+            inter.put((byte) 0x01);
+            inter.put(RandomStringUtils.random(24).getBytes());
+            inter.flip();
+            // add it
+            assertTrue(video.addData(inter));
+        }
+        assertTrue(video.getNumInterframes() == 0);
+        log.info("testSimpleFlowNoInterframeBuffer end\n");
     }
 
     @Test
