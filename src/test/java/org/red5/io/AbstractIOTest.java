@@ -1,5 +1,5 @@
 /*
-7 * RED5 Open Source Flash Server - https://github.com/Red5/
+7 * RED5 Open Source Media Server - https://github.com/Red5/
  * 
  * Copyright 2006-2016 by respective authors (see below). All rights reserved.
  * 
@@ -205,7 +205,7 @@ public abstract class AbstractIOTest {
     @Test
     public void testMap() {
         log.debug("\ntestMap");
-        Map<String, Object> mapIn = new HashMap<String, Object>();
+        Map<String, Object> mapIn = new HashMap<>();
         mapIn.put("testNumber", 34d); //numbers are stored as double
         mapIn.put("testString", "wicked awesome");
         mapIn.put("testBean", new SimpleJavaBean());

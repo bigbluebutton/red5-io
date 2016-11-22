@@ -1,5 +1,5 @@
 /*
- * RED5 Open Source Flash Server - https://github.com/Red5/
+ * RED5 Open Source Media Server - https://github.com/Red5/
  * 
  * Copyright 2006-2016 by respective authors (see below). All rights reserved.
  * 
@@ -18,7 +18,7 @@
 
 package org.red5.io.utils;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 
 /**
  * Map that should be transmitted as object through RTMP.
@@ -30,7 +30,7 @@ import java.util.HashMap;
  * @param <V>
  *            value type
  */
-public class ObjectMap<K, V> extends HashMap<K, V> {
+public class ObjectMap<K, V> extends LinkedHashMap<K, V> {
 
     private static final long serialVersionUID = 5146266119400305646L;
 

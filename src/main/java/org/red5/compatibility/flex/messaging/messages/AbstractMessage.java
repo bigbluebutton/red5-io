@@ -1,5 +1,5 @@
 /*
- * RED5 Open Source Flash Server - https://github.com/Red5/
+ * RED5 Open Source Media Server - https://github.com/Red5/
  * 
  * Copyright 2006-2016 by respective authors (see below). All rights reserved.
  * 
@@ -43,7 +43,7 @@ public class AbstractMessage implements Message, Serializable {
 
     public long timestamp;
 
-    public Map<String, Object> headers = new ObjectMap<String, Object>();
+    public Map<String, Object> headers = new ObjectMap<>();
 
     public Object body;
 

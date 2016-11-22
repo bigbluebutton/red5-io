@@ -1,5 +1,5 @@
 /*
- * RED5 Open Source Flash Server - https://github.com/Red5/
+ * RED5 Open Source Media Server - https://github.com/Red5/
  * 
  * Copyright 2006-2016 by respective authors (see below). All rights reserved.
  * 
@@ -56,6 +56,11 @@ public class AVCVideo implements IVideoStreamCodec {
      */
     private final AtomicInteger numInterframes = new AtomicInteger(0);
 
+    /**
+     * Whether or not to buffer interframes
+     */
+    private boolean bufferInterframes = true;
+
     /** Constructs a new AVCVideo. */
     public AVCVideo() {
         this.reset();
@@ -75,6 +80,8 @@ public class AVCVideo implements IVideoStreamCodec {
     public void reset() {
         keyframe = new FrameData();
         decoderConfiguration = new FrameData();
+        interframes.clear();
+        numInterframes.set(0);
     }
 
     /** {@inheritDoc} */
@@ -90,7 +97,9 @@ public class AVCVideo implements IVideoStreamCodec {
 
     /** {@inheritDoc} */
     public boolean addData(IoBuffer data) {
-        if (data.limit() > 0) {
+        if (data.hasRemaining()) {
+            // mark
+            int start = data.position();
             // get frame type
             byte frameType = data.get();
             if ((frameType & 0x0f) == VideoCodec.AVC.getId()) {
@@ -113,7 +122,8 @@ public class AVCVideo implements IVideoStreamCodec {
                     }
                     // store last keyframe
                     keyframe.setData(data);
-                } else {
+                } else if (bufferInterframes) {
+                    // rewind
                     data.rewind();
                     try {
                         int lastInterframe = numInterframes.getAndIncrement();
@@ -123,20 +133,19 @@ public class AVCVideo implements IVideoStreamCodec {
                         } else {
                             interframes.add(new FrameData(data));
                         }
-                        //                        if (log.isTraceEnabled()) {
-                        //                            log.trace("Interframes size: {} last: {}", interframes.size(), lastInterframe);
-                        //                        }
                     } catch (Throwable e) {
                         log.error("Failed to buffer interframe", e);
                     }
                 }
-                // finished with the data, rewind one last time
-                data.rewind();
             } else {
                 // not AVC data
                 log.debug("Non-AVC data, rejecting");
+                // go back to where we started
+                data.position(start);
                 return false;
             }
+            // go back to where we started
+            data.position(start);
         }
         return true;
     }
@@ -158,12 +167,18 @@ public class AVCVideo implements IVideoStreamCodec {
 
     /** {@inheritDoc} */
     public FrameData getInterframe(int index) {
-        //        if (log.isTraceEnabled()) {
-        //            log.trace("getInterframe: {} interframes count: {} has frame: {}", index, numInterframes.get(), (index < numInterframes.get()));
-        //        }
         if (index < numInterframes.get()) {
             return interframes.get(index);
         }
         return null;
     }
+
+    public boolean isBufferInterframes() {
+        return bufferInterframes;
+    }
+
+    public void setBufferInterframes(boolean bufferInterframes) {
+        this.bufferInterframes = bufferInterframes;
+    }
+
 }

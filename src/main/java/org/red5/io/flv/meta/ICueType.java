@@ -1,5 +1,5 @@
 /*
- * RED5 Open Source Flash Server - https://github.com/Red5/
+ * RED5 Open Source Media Server - https://github.com/Red5/
  * 
  * Copyright 2006-2016 by respective authors (see below). All rights reserved.
  * 
@@ -23,6 +23,7 @@ package org.red5.io.flv.meta;
  *
  * @author The Red5 Project
  * @author daccattato(daccattato@gmail.com)
+ * @author Paul Gregoire (mondain@gmail.com)
  */
 public interface ICueType {
     /**
@@ -34,5 +35,10 @@ public interface ICueType {
      * Cue point type of navigation
      */
     String NAVIGATION = "navigation";
+
+    /**
+     * Cue point type of orientation
+     */
+    String ORIENTATION = "orientation";
 
 }
