@@ -1,5 +1,5 @@
 /*
- * RED5 Open Source Flash Server - https://github.com/Red5/
+ * RED5 Open Source Media Server - https://github.com/Red5/
  * 
  * Copyright 2006-2016 by respective authors (see below). All rights reserved.
  * 
@@ -22,24 +22,29 @@ import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
-import java.nio.InvalidMarkException;
 import java.nio.channels.ClosedChannelException;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.mina.core.buffer.IoBuffer;
 import org.red5.codec.AudioCodec;
+import org.red5.codec.VideoCodec;
 import org.red5.io.IStreamableFile;
 import org.red5.io.ITag;
 import org.red5.io.ITagWriter;
-import org.red5.io.amf.Input;
 import org.red5.io.amf.Output;
 import org.red5.io.flv.FLVHeader;
 import org.red5.io.flv.IFLV;
 import org.red5.io.utils.IOUtils;
+import org.red5.media.processor.IPostProcessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -77,6 +82,11 @@ public class FLVWriter implements ITagWriter {
     private final static byte[] DEFAULT_STREAM_ID = new byte[] { (byte) (0 & 0xff), (byte) (0 & 0xff), (byte) (0 & 0xff) };
 
     /**
+     * Executor for tasks within this instance
+     */
+    private ExecutorService executor = Executors.newSingleThreadExecutor();
+
+    /**
      * FLV object
      */
     private IFLV flv;
@@ -97,14 +107,24 @@ public class FLVWriter implements ITagWriter {
     private int timeOffset;
 
     /**
+     * Id of the audio codec used.
+     */
+    private volatile int audioCodecId = -1;
+
+    /**
      * Id of the video codec used.
      */
     private volatile int videoCodecId = -1;
 
     /**
-     * Id of the audio codec used.
+     * If audio configuration data has been written
      */
-    private volatile int audioCodecId = -1;
+    private AtomicBoolean audioConfigWritten = new AtomicBoolean(false);
+
+    /**
+     * If video configuration data has been written
+     */
+    private AtomicBoolean videoConfigWritten = new AtomicBoolean(false);
 
     /**
      * Sampling rate
@@ -151,8 +171,6 @@ public class FLVWriter implements ITagWriter {
      */
     private RandomAccessFile dataFile;
 
-    private Map<Long, ITag> metaTags = new HashMap<Long, ITag>();
-
     // path to the original file passed to the writer
     private String filePath;
 
@@ -160,6 +178,12 @@ public class FLVWriter implements ITagWriter {
 
     // the size of the last tag written, which includes the tag header length
     private volatile int lastTagSize;
+
+    // to be executed after flv is finalized
+    private LinkedList<IPostProcessor> postProcessors;
+
+    // state of flv finalization
+    private AtomicBoolean finalized = new AtomicBoolean(false);
 
     /**
      * Creates writer implementation with for a given file
@@ -265,6 +289,8 @@ public class FLVWriter implements ITagWriter {
      * {@inheritDoc}
      */
     public boolean writeTag(ITag tag) throws IOException {
+        // a/v config written flags
+        boolean onWrittenSetVideoFlag = false, onWrittenSetAudioFlag = false;
         try {
             lock.acquire();
             /*
@@ -297,37 +323,15 @@ public class FLVWriter implements ITagWriter {
                 // when tag is ImmutableTag which is in red5-server-common.jar, tag.getBody().reset() will throw InvalidMarkException because 
                 // ImmutableTag.getBody() returns a new IoBuffer instance everytime.
                 IoBuffer tagBody = tag.getBody();
-                // if we're writing non-meta tags do seeking and tag size update
-                if (dataType != ITag.TYPE_METADATA) {
-                    // get the current file offset
-                    long fileOffset = dataFile.getFilePointer();
-                    log.debug("Current file offset: {} expected offset: {}", fileOffset, prevBytesWritten);
-                    if (fileOffset < prevBytesWritten) {
-                        log.debug("Seeking to expected offset");
-                        // it's necessary to seek to the length of the file
-                        // so that we can append new tags
-                        dataFile.seek(prevBytesWritten);
-                        log.debug("New file position: {}", dataFile.getChannel().position());
-                    }
-                } else {
-                    tagBody.mark();
-                    // get input data
-                    Input metadata = new Input(tagBody);
-                    // initialize type so that readString knows what to do
-                    metadata.readDataType();
-                    String metaType = metadata.readString();
-                    log.debug("Metadata tag type: {}", metaType);
-                    try {
-                        tagBody.reset();
-                    } catch (InvalidMarkException e) {
-                        //TDJ: this error is probably caused by the setter of limit on readString method
-                        log.debug("Exception reseting position of buffer: {}", e.getMessage(), e);
-                    }
-                    if (!"onCuePoint".equals(metaType)) {
-                        // store any incoming onMetaData tags until we close the file, allow onCuePoint tags to continue
-                        metaTags.put(System.currentTimeMillis(), tag);
-                        return true;
-                    }
+                // get the current file offset
+                long fileOffset = dataFile.getFilePointer();
+                log.debug("Current file offset: {} expected offset: {}", fileOffset, prevBytesWritten);
+                if (fileOffset < prevBytesWritten) {
+                    log.debug("Seeking to expected offset");
+                    // it's necessary to seek to the length of the file
+                    // so that we can append new tags
+                    dataFile.seek(prevBytesWritten);
+                    log.debug("New file position: {}", dataFile.getChannel().position());
                 }
                 // set a var holding the entire tag size including the previous tag length
                 int totalTagSize = TAG_HEADER_LENGTH + bodySize + 4;
@@ -358,11 +362,20 @@ public class FLVWriter implements ITagWriter {
                                 soundRate = 44100;
                                 soundSize = 16;
                                 soundType = true;
+                                // this is aac data, so a config chunk should be written before any media data
+                                if (bodyBuf[1] == 0) {
+                                    // when this config is written set the flag
+                                    onWrittenSetAudioFlag = true;
+                                } else {
+                                    // reject packet since config hasnt been written yet
+                                    log.debug("Rejecting AAC data since config has not yet been written");
+                                    return false;
+                                }
                             } else if (audioCodecId == AudioCodec.SPEEX.getId()) {
                                 log.trace("Speex audio type");
                                 soundRate = 5500; // actually 16kHz
                                 soundSize = 16;
-                                soundType = false; // mono								
+                                soundType = false; // mono
                             } else {
                                 switch ((id & ITag.MASK_SOUND_RATE) >> 2) {
                                     case ITag.FLAG_RATE_5_5_KHZ:
@@ -392,14 +405,43 @@ public class FLVWriter implements ITagWriter {
                                 soundType = (id & ITag.MASK_SOUND_TYPE) > 0;
                                 log.debug("Sound type: {}", soundType);
                             }
+                        } else if (!audioConfigWritten.get() && (((bodyBuf[0] & 0xff) & ITag.MASK_SOUND_FORMAT) >> 4) == AudioCodec.AAC.getId()) {
+                            // this is aac data, so a config chunk should be written before any media data
+                            if (bodyBuf[1] == 0) {
+                                // when this config is written set the flag
+                                onWrittenSetAudioFlag = true;
+                            } else {
+                                // reject packet since config hasnt been written yet
+                                return false;
+                            }
                         }
-                        // XXX is AACPacketType needed here?
                     } else if (dataType == ITag.TYPE_VIDEO) {
                         videoDataSize += bodySize;
                         if (videoCodecId == -1) {
                             int id = bodyBuf[0] & 0xff; // must be unsigned
                             videoCodecId = id & ITag.MASK_VIDEO_CODEC;
                             log.debug("Video codec id: {}", videoCodecId);
+                            if (videoCodecId == VideoCodec.AVC.getId()) {
+                                // this is avc/h264 data, so a config chunk should be written before any media data
+                                if (bodyBuf[1] == 0) {
+                                    // when this config is written set the flag
+                                    onWrittenSetVideoFlag = true;
+                                } else {
+                                    // reject packet since config hasnt been written yet
+                                    log.debug("Rejecting AVC data since config has not yet been written");
+                                    return false;
+                                }
+                            }
+                        } else if (!videoConfigWritten.get() && (((bodyBuf[0] & 0xff) & ITag.MASK_VIDEO_CODEC)) == VideoCodec.AVC.getId()) {
+                            // this is avc/h264 data, so a config chunk should be written before any media data
+                            if (bodyBuf[1] == 0) {
+                                // when this config is written set the flag
+                                onWrittenSetVideoFlag = true;
+                            } else {
+                                // reject packet since config hasnt been written yet
+                                log.debug("Rejecting AVC data since config has not yet been written");
+                                return false;
+                            }
                         }
                     }
                 }
@@ -430,9 +472,6 @@ public class FLVWriter implements ITagWriter {
                 // flip so we can process from the beginning
                 tagBuffer.flip();
                 if (log.isDebugEnabled()) {
-                    //StringBuilder sb = new StringBuilder();
-                    //HexDump.dumpHex(sb, tagBuffer.array());
-                    //log.debug("\n{}", sb);
                 }
                 // write the tag
                 dataFile.write(tagBuffer.array());
@@ -460,6 +499,12 @@ public class FLVWriter implements ITagWriter {
         } finally {
             // update the file information
             updateInfoFile();
+            // mark config written flags
+            if (onWrittenSetAudioFlag && audioConfigWritten.compareAndSet(false, true)) {
+                log.trace("Audio configuration written");
+            } else if (onWrittenSetVideoFlag && videoConfigWritten.compareAndSet(false, true)) {
+                log.trace("Video configuration written");
+            }
             // release lock
             lock.release();
         }
@@ -496,32 +541,15 @@ public class FLVWriter implements ITagWriter {
             // ensure that the channel is still open
             if (dataFile != null) {
                 log.debug("Current file position: {}", dataFile.getChannel().position());
-                // if we're writing non-meta tags do seeking and tag size update
-                if (dataType != ITag.TYPE_METADATA) {
-                    // get the current file offset
-                    long fileOffset = dataFile.getFilePointer();
-                    log.debug("Current file offset: {} expected offset: {}", fileOffset, prevBytesWritten);
-                    if (fileOffset < prevBytesWritten) {
-                        log.debug("Seeking to expected offset");
-                        // it's necessary to seek to the length of the file
-                        // so that we can append new tags
-                        dataFile.seek(prevBytesWritten);
-                        log.debug("New file position: {}", dataFile.getChannel().position());
-                    }
-                } else {
-                    data.mark();
-                    // get input data
-                    Input metadata = new Input(data);
-                    // initialize type so that readString knows what to do
-                    metadata.readDataType();
-                    String metaType = metadata.readString();
-                    log.debug("Metadata tag type: {}", metaType);
-                    data.reset();
-                    if (!"onCuePoint".equals(metaType)) {
-                        // store any incoming onMetaData tags until we close the file, allow onCuePoint tags to continue
-                        //metaTags.put(System.currentTimeMillis(), tag);
-                        return true;
-                    }
+                // get the current file offset
+                long fileOffset = dataFile.getFilePointer();
+                log.debug("Current file offset: {} expected offset: {}", fileOffset, prevBytesWritten);
+                if (fileOffset < prevBytesWritten) {
+                    log.debug("Seeking to expected offset");
+                    // it's necessary to seek to the length of the file
+                    // so that we can append new tags
+                    dataFile.seek(prevBytesWritten);
+                    log.debug("New file position: {}", dataFile.getChannel().position());
                 }
                 // set a var holding the entire tag size including the previous tag length
                 int totalTagSize = TAG_HEADER_LENGTH + bodySize + 4;
@@ -616,7 +644,7 @@ public class FLVWriter implements ITagWriter {
         buf.setAutoExpand(true);
         Output out = new Output(buf);
         out.writeString("onMetaData");
-        Map<Object, Object> params = new HashMap<Object, Object>();
+        Map<Object, Object> params = new HashMap<>();
         params.put("server", "Red5");
         params.put("creationdate", GregorianCalendar.getInstance().getTime().toString());
         params.put("duration", (Number) duration);
@@ -800,88 +828,107 @@ public class FLVWriter implements ITagWriter {
      * @return bytes transferred
      */
     private long finalizeFlv() {
-        log.debug("Finalizing {}", filePath);
         long bytesTransferred = 0L;
-        try {
-            // read file info if it exists
-            File tmpFile = new File(filePath + ".info");
-            if (tmpFile.exists()) {
-                int[] info = readInfoFile(tmpFile);
-                if (audioCodecId == -1 && info[0] > 0) {
-                    audioCodecId = info[0];
-                }
-                if (videoCodecId == -1 && info[1] > 0) {
-                    videoCodecId = info[1];
-                }
-                if (duration == 0 && info[2] > 0) {
-                    duration = info[2];
-                }
-                if (audioDataSize == 0 && info[3] > 0) {
-                    audioDataSize = info[3];
-                }
-                if (soundRate == 0 && info[4] > 0) {
-                    soundRate = info[4];
-                }
-                if (soundSize == 0 && info[5] > 0) {
-                    soundSize = info[5];
-                }
-                if (!soundType && info[6] > 0) {
-                    soundType = true;
-                }
-                if (videoDataSize == 0 && info[7] > 0) {
-                    videoDataSize = info[7];
-                }
-            } else {
-                log.debug("Flv info file not found");
-            }
-            tmpFile = null;
-            if (!append) {
-                // write the file header
-                writeHeader();
-                // write the metadata with the final duration
-                writeMetadataTag(duration * 0.001d, videoCodecId, audioCodecId);
-                // ensure we have the data file (*.ser)
-                if (dataFile == null) {
-                    dataFile = new RandomAccessFile(filePath + ".ser", "r");
-                }
-                // set the data file the beginning 
-                dataFile.seek(0);
-                // transfer / write data file into final flv
-                bytesTransferred = file.getChannel().transferFrom(dataFile.getChannel(), bytesWritten, dataFile.length());
-            } else {
-                updateMetadataTag(dataFile, duration * 0.001d, videoCodecId, audioCodecId);
-                bytesTransferred = 1;//avoid to start a job to finish up on close() method 
-            }
-            // close and remove the ser file if write was successful
-            if (dataFile != null && bytesTransferred > 0) {
-                // close the file
-                dataFile.close();
-                dataFile = null;
-                // delete the data files only if the bytes were transferred to the flv destination
-                if (bytesTransferred > 0) {
-                    File dat = new File(filePath + ".ser");
-                    if (dat.exists()) {
-                        dat.delete();
+        if (!finalized.get()) {
+            log.debug("Finalizing {}", filePath);
+            try {
+                // read file info if it exists
+                File tmpFile = new File(filePath + ".info");
+                if (tmpFile.exists()) {
+                    int[] info = readInfoFile(tmpFile);
+                    if (audioCodecId == -1 && info[0] > 0) {
+                        audioCodecId = info[0];
                     }
-                    File inf = new File(filePath + ".info");
-
-                    if (inf.exists()) {
-                        inf.delete();
+                    if (videoCodecId == -1 && info[1] > 0) {
+                        videoCodecId = info[1];
+                    }
+                    if (duration == 0 && info[2] > 0) {
+                        duration = info[2];
+                    }
+                    if (audioDataSize == 0 && info[3] > 0) {
+                        audioDataSize = info[3];
+                    }
+                    if (soundRate == 0 && info[4] > 0) {
+                        soundRate = info[4];
+                    }
+                    if (soundSize == 0 && info[5] > 0) {
+                        soundSize = info[5];
+                    }
+                    if (!soundType && info[6] > 0) {
+                        soundType = true;
+                    }
+                    if (videoDataSize == 0 && info[7] > 0) {
+                        videoDataSize = info[7];
                     }
                 } else {
-                    log.warn("FLV serial file not deleted due to transfer error");
+                    log.debug("Flv info file not found");
                 }
-            }
-        } catch (Exception e) {
-            log.warn("Finalization of flv file failed; new finalize job will be spawned", e);
-        } finally {
-            if (file != null) {
-                // close the file
-                try {
-                    file.close();
-                } catch (Exception e) {
+                tmpFile = null;
+                if (!append) {
+                    // write the file header
+                    writeHeader();
+                    // write the metadata with the final duration
+                    writeMetadataTag(duration * 0.001d, videoCodecId, audioCodecId);
+                    // ensure we have the data file (*.ser)
+                    if (dataFile == null) {
+                        dataFile = new RandomAccessFile(filePath + ".ser", "r");
+                    }
+                    // set the data file the beginning 
+                    dataFile.seek(0);
+                    // transfer / write data file into final flv
+                    bytesTransferred = file.getChannel().transferFrom(dataFile.getChannel(), bytesWritten, dataFile.length());
+                } else {
+                    updateMetadataTag(dataFile, duration * 0.001d, videoCodecId, audioCodecId);
+                    bytesTransferred = 1;//avoid to start a job to finish up on close() method 
                 }
+                // close and remove the ser file if write was successful
+                if (dataFile != null && bytesTransferred > 0) {
+                    // close the file
+                    dataFile.close();
+                    dataFile = null;
+                    // delete the data files only if the bytes were transferred to the flv destination
+                    if (bytesTransferred > 0) {
+                        File dat = new File(filePath + ".ser");
+                        if (dat.exists()) {
+                            dat.delete();
+                        }
+                        File inf = new File(filePath + ".info");
+                        if (inf.exists()) {
+                            inf.delete();
+                        }
+                    } else {
+                        log.warn("FLV serial file not deleted due to transfer error");
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Finalization of flv file failed; new finalize job will be spawned", e);
+            } finally {
+                if (file != null) {
+                    // close the file
+                    try {
+                        file.close();
+                    } catch (Exception e) {
+                    }
+                }
+                // run post process
+                if (postProcessors != null) {
+                    for (IPostProcessor postProcessor : postProcessors) {
+                        log.debug("Execute: {}", postProcessor);
+                        try {
+                            // set properties that the post processor requires or may require
+                            postProcessor.init(filePath);
+                            // execute and block
+                            executor.submit(postProcessor).get();
+                        } catch (Exception e) {
+                            log.warn("Exception during post process on: {}", filePath);
+                        }
+                    }
+                    postProcessors.clear();
+                }
+                finalized.compareAndSet(false, true);
             }
+        } else {
+            log.trace("Finalization already completed");
         }
         return bytesTransferred;
     }
@@ -960,7 +1007,6 @@ public class FLVWriter implements ITagWriter {
     public void close() {
         log.debug("close");
         // spawn a thread to finish up our flv writer work
-        log.debug("Meta tags: {}", metaTags);
         boolean locked = false;
         long bytesTransferred = 0L;
         try {
@@ -975,28 +1021,34 @@ public class FLVWriter implements ITagWriter {
             if (locked) {
                 lock.release();
             }
-            log.debug("{} closed", filePath);
+            log.debug("Closed: {}", filePath);
             // if write failed, spawn a job to finish up
             if (bytesTransferred == 0L) {
                 log.info("Spawning flv finalizer for {}", filePath);
                 // spawn job to write the finalized FLV file based on the ser file
-                spawnFinalizer().start();
+                Future<?> future = executor.submit(new FLVFinalizer());
+                // get result / blocking
+                try {
+                    future.get();
+                } catch (Exception e) {
+                    log.warn("Exception while finalizing: {}", filePath, e);
+                }
             }
+        }
+        if (executor != null && !executor.isTerminated()) {
+            executor.shutdown();
         }
     }
 
-    /**
-     * Spawn a finalizer thread and return it (unstarted).
-     * 
-     * @return Thread containing finalizer
-     */
-    Thread spawnFinalizer() {
-        return new Thread(new FLVFinalizer(), "FLVFinalizer#" + System.currentTimeMillis());
+    /** {@inheritDoc} */
+    public void addPostProcessor(IPostProcessor postProcessor) {
+        if (postProcessors == null) {
+            postProcessors = new LinkedList<>();
+        }
+        postProcessors.add(postProcessor);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     public IStreamableFile getFile() {
         return flv;
     }
@@ -1146,17 +1198,32 @@ public class FLVWriter implements ITagWriter {
             System.err.println("Serial file was not found or could not be read");
         }
         if (writer != null) {
-            // spawn a flv finalizer 
-            Thread job = writer.spawnFinalizer();
-            // start the work
-            job.start();
-            // wait for it to finish
-            job.join();
-            log.debug("File repair completed");
-            System.out.println("File repair completed");
-            result = true;
+            // spawn a flv finalizer
+            Future<?> future = writer.submit(writer.new FLVFinalizer());
+            try {
+                // get result / blocking
+                future.get();
+                log.debug("File repair completed");
+                System.out.println("File repair completed");
+                result = true;
+            } catch (Exception e) {
+                log.warn("Exception while finalizing: {}", path, e);
+            }
         }
         return result;
+    }
+
+    /**
+     * Submits a finalizer internally.
+     * 
+     * @param flvFinalizer
+     * @return Future representing task
+     */
+    private Future<?> submit(FLVFinalizer flvFinalizer) {
+        if (executor != null && !executor.isTerminated()) {
+            return executor.submit(flvFinalizer);
+        }
+        return null;
     }
 
     /**

@@ -1,5 +1,5 @@
 /*
- * RED5 Open Source Flash Server - https://github.com/Red5/
+ * RED5 Open Source Media Server - https://github.com/Red5/
  * 
  * Copyright 2006-2016 by respective authors (see below). All rights reserved.
  * 
@@ -17,6 +17,8 @@
  */
 
 package org.red5.io.object;
+
+import static org.red5.io.object.Deserializer.BLACK_LIST;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -87,4 +89,7 @@ public class BaseInput {
         return refMap.get(Integer.valueOf(id));
     }
 
+    protected boolean classAllowed(String name) {
+        return BLACK_LIST.contains(name);
+    }
 }

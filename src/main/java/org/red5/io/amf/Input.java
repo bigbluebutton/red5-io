@@ -1,5 +1,5 @@
 /*
- * RED5 Open Source Flash Server - https://github.com/Red5/
+ * RED5 Open Source Media Server - https://github.com/Red5/
  * 
  * Copyright 2006-2016 by respective authors (see below). All rights reserved.
  * 
@@ -37,6 +37,7 @@ import org.apache.commons.beanutils.BeanUtils;
 import org.apache.commons.beanutils.BeanUtilsBean;
 import org.apache.commons.beanutils.PropertyUtilsBean;
 import org.apache.commons.codec.binary.Hex;
+import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.mina.core.buffer.IoBuffer;
 import org.red5.io.amf3.ByteArray;
 import org.red5.io.object.BaseInput;
@@ -62,7 +63,7 @@ import org.w3c.dom.Document;
 @SuppressWarnings("serial")
 public class Input extends BaseInput implements org.red5.io.object.Input {
 
-    protected static Logger log = LoggerFactory.getLogger(Input.class);
+    protected Logger log = LoggerFactory.getLogger(this.getClass());
 
     protected static Map<String, String> classAliases = new HashMap<String, String>(3) {
         {
@@ -134,9 +135,9 @@ public class Input extends BaseInput implements org.red5.io.object.Input {
                     return (byte) (currentDataType + DataTypes.CUSTOM_AMF_MASK);
                 case AMF.TYPE_AMF3_OBJECT:
                     log.debug("Switch to AMF3");
-                    break;
+                    return DataTypes.CORE_SWITCH;
             }
-        } while(hasMoreProperties());
+        } while (hasMoreProperties());
         log.trace("No more data types available");
         return DataTypes.CORE_END_OBJECT;
     }
@@ -224,48 +225,17 @@ public class Input extends BaseInput implements org.red5.io.object.Input {
         byte[] str = new byte[len];
         buf.get(str);
         String string = bufferToString(str);
-        //String string = bufferToString(Arrays.copyOfRange(buf.array(), buf.position(), (buf.position() + len)));
-        //buf.skip(len);
         return string;
     }
-
-//    /**
-//     * Returns a string based on the buffer
-//     *
-//     * @param buf
-//     *            Byte buffer with data
-//     * @return String Decoded string
-//     */
-//    public static String getString(IoBuffer buf) {
-//        int len = buf.getUnsignedShort();
-//        log.debug("Length: {} limit: {}", len, buf.limit());
-//        String string = bufferToString(Arrays.copyOfRange(buf.array(), buf.position(), (buf.position() + len)));
-//        buf.skip(len);
-//        return string;
-//    }
-//
-//    /**
-//     * Returns a string based on the buffer
-//     *
-//     * @param buf
-//     *            Byte buffer with data
-//     * @return String Decoded string
-//     */
-//    public static String getString(java.nio.ByteBuffer buf) {
-//        int len = buf.getShort() & 0xffff;
-//        log.debug("Length: {} limit: {}", len, buf.limit());
-//        String string = bufferToString(Arrays.copyOfRange(buf.array(), buf.position(), (buf.position() + len)));
-//        buf.position(buf.position() + len);
-//        return string;
-//    }
 
     /**
      * Converts the bytes into a string.
      * 
-     * @param str string bytes
+     * @param str
+     *            string bytes
      * @return decoded String
      */
-    private final static String bufferToString(byte[] str) {
+    private final String bufferToString(byte[] str) {
         String string = null;
         if (str != null) {
             string = AMF.CHARSET.decode(ByteBuffer.wrap(str)).toString();
@@ -312,14 +282,14 @@ public class Input extends BaseInput implements org.red5.io.object.Input {
         if (collection.isArray()) {
             result = ArrayUtils.getArray(collection.getComponentType(), count);
         } else {
-        	result = resultCollection;
+            result = resultCollection;
         }
         storeReference(result); //reference should be stored before reading of objects to get correct refIds
         for (int i = 0; i < count; i++) {
             resultCollection.add(Deserializer.deserialize(this, Object.class));
         }
         if (collection.isArray()) {
-        	ArrayUtils.fillArray(collection.getComponentType(), result, resultCollection);
+            ArrayUtils.fillArray(collection.getComponentType(), result, resultCollection);
         }
         return result;
     }
@@ -349,7 +319,7 @@ public class Input extends BaseInput implements org.red5.io.object.Input {
             if (hasMoreProperties()) {
                 skipPropertySeparator();
             } else {
-            	break;
+                break;
             }
         } while (hasMoreProperties());
     }
@@ -367,9 +337,7 @@ public class Input extends BaseInput implements org.red5.io.object.Input {
         while (hasMoreProperties()) {
             String key = getString();
             log.debug("key: {}", key);
-            try {
-                Integer.parseInt(key);
-            } catch (NumberFormatException e) {
+            if (!NumberUtils.isParsable(key)) {
                 log.debug("key {} is causing non normal array", key);
                 normalArray = false;
             }
@@ -483,7 +451,7 @@ public class Input extends BaseInput implements org.red5.io.object.Input {
             if (hasMoreProperties()) {
                 skipPropertySeparator();
             } else {
-            	break; //hasMoreProperties == false, position moved to +3
+                break; //hasMoreProperties == false, position moved to +3
             }
         }
         return bean;
@@ -496,7 +464,7 @@ public class Input extends BaseInput implements org.red5.io.object.Input {
      */
     protected Map<String, Object> readSimpleObject() {
         log.debug("readSimpleObject");
-        Map<String, Object> result = new ObjectMap<String, Object>();
+        Map<String, Object> result = new ObjectMap<>();
         readKeyValues(result);
         storeReference(result);
         return result;
@@ -522,6 +490,9 @@ public class Input extends BaseInput implements org.red5.io.object.Input {
                 } else if (className.equals("RecordSetPage")) {
                     result = new RecordSetPage(this);
                     storeReference(result);
+                } else if (!classAllowed(className)) {
+                    log.debug("Class creation is not allowed {}", className);
+                    result = readSimpleObject();
                 } else {
                     instance = newInstance(className);
                     if (instance != null) {
@@ -655,12 +626,10 @@ public class Input extends BaseInput implements org.red5.io.object.Input {
         return getReference(buf.getUnsignedShort());
     }
 
-    /**
-     * Resets map
-     *
-     */
+    /** {@inheritDoc} */
+    @Override
     public void reset() {
-        this.clearReferences();
+        clearReferences();
     }
 
     protected Type getPropertyType(Object instance, String propertyName) {
