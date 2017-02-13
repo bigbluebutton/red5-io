@@ -32,13 +32,13 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Vector;
-
 import org.apache.commons.beanutils.BeanUtils;
 import org.apache.commons.beanutils.BeanUtilsBean;
 import org.apache.commons.beanutils.PropertyUtilsBean;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.mina.core.buffer.IoBuffer;
+import org.red5.io.BufferException;
 import org.red5.io.amf3.ByteArray;
 import org.red5.io.object.BaseInput;
 import org.red5.io.object.DataTypes;
@@ -281,6 +281,12 @@ public class Input extends BaseInput implements org.red5.io.object.Input {
         Object result = null;
         int count = buf.getInt();
         log.debug("Count: {}", count);
+        int MAX_PACKET_SIZE = 3000000; // 3MB
+
+        if (count > MAX_PACKET_SIZE) {
+            throw new BufferException(String.format("Trying to allocate array of size : %s", count));
+        }
+
         // To conform to the Input API, we should convert the output into an Array if the Type asks us to.
         Class<?> collection = Collection.class;
         if (target instanceof Class<?>) {
