@@ -31,7 +31,7 @@ import org.slf4j.LoggerFactory;
  * @author Tiago Jacobs (tiago@imdt.com.br)
  * @author Paul Gregoire (mondain@gmail.com)
  */
-public class AVCVideo implements IVideoStreamCodec {
+public class AVCVideo extends AbstractVideo {
 
     private static Logger log = LoggerFactory.getLogger(AVCVideo.class);
 
@@ -40,16 +40,13 @@ public class AVCVideo implements IVideoStreamCodec {
      */
     static final String CODEC_NAME = "AVC";
 
-    /** Last keyframe found */
-    private FrameData keyframe;
-
     /** Video decoder configuration data */
     private FrameData decoderConfiguration;
 
     /**
      * Storage for frames buffered since last key frame
      */
-    private final CopyOnWriteArrayList<FrameData> interframes = new CopyOnWriteArrayList<FrameData>();
+    private final CopyOnWriteArrayList<FrameData> interframes = new CopyOnWriteArrayList<>();
 
     /**
      * Number of frames buffered since last key frame
@@ -81,8 +78,13 @@ public class AVCVideo implements IVideoStreamCodec {
     /** {@inheritDoc} */
     @Override
     public void reset() {
-        keyframe = new FrameData();
         decoderConfiguration = new FrameData();
+        softReset();
+    }
+
+    // reset all except decoder configuration
+    private void softReset() {
+        keyframes.clear();
         interframes.clear();
         numInterframes.set(0);
     }
@@ -102,37 +104,60 @@ public class AVCVideo implements IVideoStreamCodec {
     /** {@inheritDoc} */
     @Override
     public boolean addData(IoBuffer data) {
+        return addData(data, (keyframeTimestamp + 1));
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public boolean addData(IoBuffer data, int timestamp) {
+        //log.trace("addData timestamp: {} remaining: {}", timestamp, data.remaining());
         if (data.hasRemaining()) {
             // mark
             int start = data.position();
             // get frame type
             byte frameType = data.get();
+            byte avcType = data.get();
             if ((frameType & 0x0f) == VideoCodec.AVC.getId()) {
                 // check for keyframe
                 if ((frameType & 0xf0) == FLV_FRAME_KEY) {
-                    log.trace("Key frame found");
-                    numInterframes.set(0);
-                    interframes.clear();
-                    byte AVCPacketType = data.get();
+                    //log.trace("Key frame");
+                    if (log.isDebugEnabled()) {
+                        log.debug("Keyframe - AVC type: {}", avcType);
+                    }
                     // rewind
                     data.rewind();
-                    // sequence header / here comes a AVCDecoderConfigurationRecord
-                    log.debug("AVCPacketType: {}", AVCPacketType);
-                    if (AVCPacketType == 0) {
-                        log.trace("Decoder configuration found");
-                        // Store AVCDecoderConfigurationRecord data
-                        decoderConfiguration.setData(data);
-                        // rewind
-                        data.rewind();
+                    switch (avcType) {
+                        case 1: // keyframe
+                            //log.trace("Keyframe - keyframeTimestamp: {} {}", keyframeTimestamp, timestamp);
+                            // get the time stamp and compare with the current value
+                            if (timestamp != keyframeTimestamp) {
+                                //log.trace("New keyframe");
+                                // new keyframe
+                                keyframeTimestamp = timestamp;
+                                // if its a new keyframe, clear keyframe and interframe collections
+                                softReset();
+                            }
+                            // store keyframe
+                            keyframes.add(new FrameData(data));
+                            break;
+                        case 0: // configuration
+                            //log.trace("Decoder configuration");
+                            // Store AVCDecoderConfigurationRecord data
+                            decoderConfiguration.setData(data);
+                            softReset();
+                            break;
                     }
-                    // store last keyframe
-                    keyframe.setData(data);
+                    //log.trace("Keyframes: {}", keyframes.size());
                 } else if (bufferInterframes) {
+                    //log.trace("Interframe");
+                    if (log.isDebugEnabled()) {
+                        log.debug("Interframe - AVC type: {}", avcType);
+                    }
                     // rewind
                     data.rewind();
                     try {
                         int lastInterframe = numInterframes.getAndIncrement();
-                        log.trace("Buffering interframe #{}", lastInterframe);
+                        //log.trace("Buffering interframe #{}", lastInterframe);
                         if (lastInterframe < interframes.size()) {
                             interframes.get(lastInterframe).setData(data);
                         } else {
@@ -141,6 +166,7 @@ public class AVCVideo implements IVideoStreamCodec {
                     } catch (Throwable e) {
                         log.error("Failed to buffer interframe", e);
                     }
+                    //log.trace("Interframes: {}", interframes.size());
                 }
             } else {
                 // not AVC data
@@ -153,12 +179,6 @@ public class AVCVideo implements IVideoStreamCodec {
             data.position(start);
         }
         return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public IoBuffer getKeyframe() {
-        return keyframe.getFrame();
     }
 
     /** {@inheritDoc} */

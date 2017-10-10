@@ -24,13 +24,21 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.mina.core.buffer.IoBuffer;
 import org.junit.Test;
 import org.red5.codec.IVideoStreamCodec.FrameData;
+import org.red5.io.ITag;
+import org.red5.io.flv.impl.FLVReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@SuppressWarnings("deprecation")
 public class AVCVideoTest {
 
     private static Logger log = LoggerFactory.getLogger(AVCVideoTest.class);
@@ -170,4 +178,38 @@ public class AVCVideoTest {
         assertNull(fd);
         log.info("testRealisticFlow end\n");
     }
+
+    @Test
+    public void testA7SliceBug() {
+        log.info("\n testA7SliceBug");
+        Path path = Paths.get("target/test-classes/fixtures/ipadmini-A7.flv");
+        try {
+            File file = path.toFile();
+            log.info("Reading: {}", file.getName());
+            FLVReader reader = new FLVReader(file, true);
+            ITag tag = null;
+            AVCVideo video = new AVCVideo();
+            while (reader.hasMoreTags()) {
+                tag = reader.readTag();
+                int timestamp = tag.getTimestamp();
+                log.debug("Tag: {} timestamp: {}", tag.getDataType(), timestamp);
+                if (tag.getDataType() == 9) {
+                    IoBuffer buf = tag.getBody();
+                    if (video.canHandleData(buf)) {
+                        video.addData(buf, tag.getTimestamp());
+                    }
+                }
+                // when the audio comes in for ts 2176, check for the 2 proceeding sliced keyframes
+                if (timestamp == 2176) {
+                    assertTrue(video.getKeyframes().length == 2);
+                }
+            }
+            reader.close();
+            log.info("Finished reading: {}\n", file.getName());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        log.info("testA7SliceBug end\n");
+    }
+
 }
