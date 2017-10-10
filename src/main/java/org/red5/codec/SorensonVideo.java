@@ -22,7 +22,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.mina.core.buffer.IoBuffer;
-import org.red5.io.IoConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,7 +32,7 @@ import org.slf4j.LoggerFactory;
  * @author Joachim Bauch (jojo@struktur.de)
  * @author Paul Gregoire (mondain@gmail.com)
  */
-public class SorensonVideo implements IVideoStreamCodec, IoConstants {
+public class SorensonVideo extends AbstractVideo {
 
     private Logger log = LoggerFactory.getLogger(SorensonVideo.class);
 
@@ -60,7 +59,7 @@ public class SorensonVideo implements IVideoStreamCodec, IoConstants {
     /**
      * Storage for frames buffered since last key frame
      */
-    private final CopyOnWriteArrayList<FrameData> interframes = new CopyOnWriteArrayList<FrameData>();
+    private final CopyOnWriteArrayList<FrameData> interframes = new CopyOnWriteArrayList<>();
 
     /**
      * Number of frames buffered since last key frame
@@ -140,12 +139,12 @@ public class SorensonVideo implements IVideoStreamCodec, IoConstants {
         numInterframes.set(0);
         interframes.clear();
         // Store last keyframe
-        this.dataCount = data.limit();
-        if (this.blockSize < this.dataCount) {
-            this.blockSize = this.dataCount;
-            this.blockData = new byte[this.blockSize];
+        dataCount = data.limit();
+        if (blockSize < dataCount) {
+            blockSize = dataCount;
+            blockData = new byte[blockSize];
         }
-        data.get(this.blockData, 0, this.dataCount);
+        data.get(blockData, 0, dataCount);
         data.rewind();
         return true;
     }
@@ -153,17 +152,12 @@ public class SorensonVideo implements IVideoStreamCodec, IoConstants {
     /** {@inheritDoc} */
     @Override
     public IoBuffer getKeyframe() {
-        if (this.dataCount > 0) {
-            IoBuffer result = IoBuffer.allocate(this.dataCount);
-            result.put(this.blockData, 0, this.dataCount);
+        if (dataCount > 0) {
+            IoBuffer result = IoBuffer.allocate(dataCount);
+            result.put(blockData, 0, dataCount);
             result.rewind();
             return result;
         }
-        return null;
-    }
-
-    @Override
-    public IoBuffer getDecoderConfiguration() {
         return null;
     }
 
@@ -181,4 +175,10 @@ public class SorensonVideo implements IVideoStreamCodec, IoConstants {
         }
         return null;
     }
+
+    @Override
+    public FrameData[] getKeyframes() {
+        return dataCount > 0 ? new FrameData[] {new FrameData(getKeyframe())} : new FrameData[0];
+    }
+
 }

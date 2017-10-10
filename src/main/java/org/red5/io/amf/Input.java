@@ -28,7 +28,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Vector;
@@ -46,9 +45,9 @@ import org.red5.io.object.Deserializer;
 import org.red5.io.object.RecordSet;
 import org.red5.io.object.RecordSetPage;
 import org.red5.io.utils.ArrayUtils;
+import org.red5.io.utils.ConversionUtils;
 import org.red5.io.utils.ObjectMap;
 import org.red5.io.utils.XMLUtils;
-import org.red5.io.utils.ConversionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
@@ -99,48 +98,53 @@ public class Input extends BaseInput implements org.red5.io.object.Input {
      */
     @Override
     public byte readDataType() {
-        do {
-            // get the data type
-            currentDataType = buf.get();
-            log.trace("Data type: {}", currentDataType);
-            switch (currentDataType) {
-                case AMF.TYPE_NULL:
-                case AMF.TYPE_UNDEFINED:
-                    return DataTypes.CORE_NULL;
-                case AMF.TYPE_NUMBER:
-                    return DataTypes.CORE_NUMBER;
-                case AMF.TYPE_BOOLEAN:
-                    return DataTypes.CORE_BOOLEAN;
-                case AMF.TYPE_STRING:
-                case AMF.TYPE_LONG_STRING:
-                    return DataTypes.CORE_STRING;
-                case AMF.TYPE_CLASS_OBJECT:
-                case AMF.TYPE_OBJECT:
-                    return DataTypes.CORE_OBJECT;
-                case AMF.TYPE_MIXED_ARRAY:
-                    return DataTypes.CORE_MAP;
-                case AMF.TYPE_ARRAY:
-                    return DataTypes.CORE_ARRAY;
-                case AMF.TYPE_DATE:
-                    return DataTypes.CORE_DATE;
-                case AMF.TYPE_XML:
-                    return DataTypes.CORE_XML;
-                case AMF.TYPE_REFERENCE:
-                    return DataTypes.OPT_REFERENCE;
-                case AMF.TYPE_UNSUPPORTED:
-                case AMF.TYPE_MOVIECLIP:
-                case AMF.TYPE_RECORDSET:
-                    // These types are not handled by core datatypes
-                    // So add the amf mask to them, this way the deserializer
-                    // will call back to readCustom, we can then handle or return null
-                    return (byte) (currentDataType + DataTypes.CUSTOM_AMF_MASK);
-                case AMF.TYPE_AMF3_OBJECT:
-                    log.debug("Switch to AMF3");
-                    return DataTypes.CORE_SWITCH;
-            }
-        } while (hasMoreProperties());
-        log.trace("No more data types available");
-        return DataTypes.CORE_END_OBJECT;
+        // prevent the handling of an empty Object
+        if (buf.hasRemaining()) {
+            do {
+                // get the data type
+                currentDataType = buf.get();
+                log.trace("Data type: {}", currentDataType);
+                switch (currentDataType) {
+                    case AMF.TYPE_NULL:
+                    case AMF.TYPE_UNDEFINED:
+                        return DataTypes.CORE_NULL;
+                    case AMF.TYPE_NUMBER:
+                        return DataTypes.CORE_NUMBER;
+                    case AMF.TYPE_BOOLEAN:
+                        return DataTypes.CORE_BOOLEAN;
+                    case AMF.TYPE_STRING:
+                    case AMF.TYPE_LONG_STRING:
+                        return DataTypes.CORE_STRING;
+                    case AMF.TYPE_CLASS_OBJECT:
+                    case AMF.TYPE_OBJECT:
+                        return DataTypes.CORE_OBJECT;
+                    case AMF.TYPE_MIXED_ARRAY:
+                        return DataTypes.CORE_MAP;
+                    case AMF.TYPE_ARRAY:
+                        return DataTypes.CORE_ARRAY;
+                    case AMF.TYPE_DATE:
+                        return DataTypes.CORE_DATE;
+                    case AMF.TYPE_XML:
+                        return DataTypes.CORE_XML;
+                    case AMF.TYPE_REFERENCE:
+                        return DataTypes.OPT_REFERENCE;
+                    case AMF.TYPE_UNSUPPORTED:
+                    case AMF.TYPE_MOVIECLIP:
+                    case AMF.TYPE_RECORDSET:
+                        // These types are not handled by core datatypes
+                        // So add the amf mask to them, this way the deserializer
+                        // will call back to readCustom, we can then handle or return null
+                        return (byte) (currentDataType + DataTypes.CUSTOM_AMF_MASK);
+                    case AMF.TYPE_AMF3_OBJECT:
+                        log.debug("Switch to AMF3");
+                        return DataTypes.CORE_SWITCH;
+                }
+            } while (hasMoreProperties());
+            log.trace("No more data types available");
+            return DataTypes.CORE_END_OBJECT;
+        }
+        // empty object, may as well be null
+        return DataTypes.CORE_NULL;
     }
 
     /**
@@ -325,7 +329,7 @@ public class Input extends BaseInput implements org.red5.io.object.Input {
      *            Map to put resulting pair to
      */
     protected void readKeyValues(Map<String, Object> result) {
-        do {
+    	while (hasMoreProperties()) {
             String name = readPropertyName();
             log.debug("property: {}", name);
             Object property = Deserializer.deserialize(this, Object.class);
@@ -336,7 +340,7 @@ public class Input extends BaseInput implements org.red5.io.object.Input {
             } else {
                 break;
             }
-        } while (hasMoreProperties());
+        }
     }
 
     @Override
@@ -344,40 +348,20 @@ public class Input extends BaseInput implements org.red5.io.object.Input {
         // the maximum number used in this mixed array
         int maxNumber = buf.getInt();
         log.debug("Read start mixed array: {}", maxNumber);
-        Object result;
-        final Map<Object, Object> mixedResult = new LinkedHashMap<Object, Object>(maxNumber);
-        // we must store the reference before we deserialize any items in it to ensure
-        // that reference IDs are correct
-        int reference = storeReference(mixedResult);
-        Boolean normalArray = true;
+        ObjectMap<Object, Object> result = new ObjectMap<Object, Object>();
+        // we must store the reference before we deserialize any items in it to ensure that reference IDs are correct
+        int reference = storeReference(result);
         while (hasMoreProperties()) {
             String key = getString();
-            log.debug("key: {}", key);
-            if (!NumberUtils.isParsable(key)) {
-                log.debug("key {} is causing non normal array", key);
-                normalArray = false;
-            }
             Object item = Deserializer.deserialize(this, Object.class);
             log.debug("item: {}", item);
-            mixedResult.put(key, item);
-        }
-        if (mixedResult.size() <= maxNumber + 1 && normalArray) {
-            // MixedArray actually is a regular array
-            log.debug("mixed array is a regular array");
-            final List<Object> listResult = new ArrayList<Object>(maxNumber);
-            for (int i = 0; i < maxNumber; i++) {
-                listResult.add(i, mixedResult.get(String.valueOf(i)));
+            if (!NumberUtils.isParsable(key)) {
+                result.put(key, item);
+            } else {
+                result.put(Integer.valueOf(key), item);
             }
-            result = listResult;
-        } else {
-            // convert initial indexes
-            mixedResult.remove("length");
-            for (int i = 0; i < maxNumber; i++) {
-                final Object value = mixedResult.remove(String.valueOf(i));
-                mixedResult.put(i, value);
-            }
-            result = mixedResult;
         }
+        result.remove("length");
         // replace the original reference with the final result
         storeReference(reference, result);
         return result;
